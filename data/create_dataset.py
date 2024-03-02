@@ -71,7 +71,7 @@ class DatasetCreator:
                                     .format(self.label_kind)), delimiter=',')
 
             # Get each original sample and create dataset samples
-            id_trials = [x.split("/")[-1].partition("_")[0] for x in list_files(dir, sorted_dir=False)] # get beggining of files
+            id_trials = [x.split(os.path.sep)[-1].partition("_")[0] for x in list_files(dir, sorted_dir=False)] # get beggining of files
             id_trials = sorted(np.unique(id_trials)[:-1], key=lambda x: int(x))  # remove duplicates, "label", and sort
             for i, id in enumerate(tqdm(id_trials, desc=f'Subject {subj}')):
                 pupil_data = np.genfromtxt(os.path.join(dir, '{}_PUPIL.csv'
@@ -80,7 +80,7 @@ class DatasetCreator:
                                     .format(id)), delimiter=',')
                 eye_dist_data = np.genfromtxt(os.path.join(dir, '{}_EYE_DIST.csv'
                                     .format(id)), delimiter=',')
-                gsr_data = np.genfromtxt(os.path.join(dir, '{}_GSR-NO-BASE.csv'
+                gsr_data = np.genfromtxt(os.path.join(dir, '{}_GSR.csv'
                                     .format(id)), delimiter=',')
                 eeg_data = np.genfromtxt(os.path.join(dir, '{}_EEG.csv'
                                      .format(id)), delimiter=',')

@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_num', type=int, default=0)
     parser.add_argument('--n', type=int, default=4, help="n parameter for PHM layers")
     parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--dropout_rate', type=int, default=0.1789, help='0.1789 for arousal and 0.2118 for valence')
+    parser.add_argument('--dropout_rate', type=float, default=0.1789, help='0.1789 for arousal and 0.2118 for valence')
     parser.add_argument('--epochs', type=int, default=50, help="50 for arousal and 60 for valence")
     parser.add_argument('--max_lr', type=float, default=0.00000796, help="0.00000796 for arousal and 0.002489 for valence")
     parser.add_argument('--min_mom', type=float, default=0.7403, help="0.7403 for arousal and 0.8314 for valence")
