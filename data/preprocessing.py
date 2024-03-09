@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 import xml.etree.ElementTree as ET
 import mne
@@ -20,7 +21,8 @@ def list_files(directory, sorted_dir):
         files.append(single)
     return files
 
-def preprocess(sessions_dir, save_path, verbose=False):
+
+def preprocess(sessions_dir, save_path, sampling_freq, preprocess=True, verbose=False):
     for dir_id in tqdm(range(len(sessions_dir)), desc='Preprocessing'):
         dir = sessions_dir[dir_id]
 
@@ -55,10 +57,11 @@ def preprocess(sessions_dir, save_path, verbose=False):
         highpass = raw.info['highpass']
         lowpass = raw.info['lowpass']
 
-        # Resample all data from 256 Hz to 128 Hz, passing status channels as stimuli
+        # Resample all data from 256 Hz to @p sampling_freq, passing status channels as stimuli
         # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
         # OBS: this function applies first a brick-wall filter at the Nyquist frequency of the desired new sampling rate (i.e. 64Hz)
-        raw = raw.resample(sfreq=128, stim_picks=46, verbose=verbose)
+        if sampling_freq != sfreq:
+            raw = raw.resample(sfreq=128, stim_picks=46, verbose=verbose)
 
         # Get status channel to extract video's initial and ending samples (to remove baseline pre/post-stimulus)
         status_ch, time = raw[-1]  # extract last channel
@@ -74,51 +77,59 @@ def preprocess(sessions_dir, save_path, verbose=False):
         ECG_CH = ch_names[32:35]
         GSR_CH = ch_names[40]
 
-        # PREPROCESSING 
         # EEG ------------------------------------------------------------------------------------------- 
         raw_eeg = raw.copy().pick_channels(EEG_CH, verbose=verbose)
-        # Referencing to average reference 
-        # documentation: https://mne.tools/dev/generated/mne.set_eeg_reference.html
-        raw_eeg = raw_eeg.set_eeg_reference(ref_channels='average', verbose=verbose)
-        # Artifact removal and filtering  
-        # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
-        # Power line at 50 Hz, as proved with plots below
-        # Band pass FIR filter from 1 - 45 Hz => still need to apply notch filter at 50Hz,
-        # since the filter is not acting upon the 50Hz component (neglectable attenuation)
-        raw_eeg = raw_eeg.notch_filter(50, verbose=verbose)
-        raw_eeg = raw_eeg.filter(l_freq=1,  h_freq=45, verbose=verbose)
-        # OBS the order between notch and bandpass filter is inrelevant (TRIED)
-        # EOG removal: not considered for now, TODO?
         # ECG -------------------------------------------------------------------------------------------
         raw_ecg = raw.copy().pick_channels(ECG_CH, verbose=verbose)
-        # Artifact removal and filtering  
-        # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
-        # Power line at 50 Hz, as proved with plots below
-        # Band pass FIR filter from 0.5 - 45 Hz => still need to apply notch filter at 50Hz,
-        # since the filter is not acting upon the 50Hz component (neglectable attenuation)
-        raw_ecg = raw_ecg.notch_filter(50, verbose=verbose)
-        raw_ecg = raw_ecg.filter(l_freq=0.5, h_freq=45, verbose=verbose)
-        # OBS the order between notch and bandpass filter is inrelevant (TRIED)
         # GSR -------------------------------------------------------------------------------------------
         raw_gsr = raw.copy().pick_channels([GSR_CH], verbose=verbose)
-        # Artifact removal and filtering  
-        # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
-        # Power line at 50 Hz, as proved with plots below
-        # Low pass FIR filter at 60 Hz => still need to apply notch filter at 50Hz
-        raw_gsr = raw_gsr.notch_filter(50, verbose=verbose)
-        raw_gsr = raw_gsr.filter(l_freq=None, h_freq=60, verbose=verbose)
-        # OBS the order between notch and bandpass filter is inrelevant (TRIED)
+
+        if preprocess:
+            # PREPROCESSING
+            # EEG -------------------------------------------------------------------------------------------
+            # Referencing to average reference
+            # documentation: https://mne.tools/dev/generated/mne.set_eeg_reference.html
+            raw_eeg = raw_eeg.set_eeg_reference(ref_channels='average', verbose=verbose)
+            # Artifact removal and filtering
+            # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
+            # Power line at 50 Hz, as proved with plots below
+            # Band pass FIR filter from 1 - 45 Hz => still need to apply notch filter at 50Hz,
+            # since the filter is not acting upon the 50Hz component (neglectable attenuation)
+            raw_eeg = raw_eeg.notch_filter(50, verbose=verbose)
+            raw_eeg = raw_eeg.filter(l_freq=1, h_freq=45, verbose=verbose)
+            # OBS the order between notch and bandpass filter is inrelevant (TRIED)
+            # EOG removal: not considered for now, TODO?
+            # ECG -------------------------------------------------------------------------------------------
+            # Artifact removal and filtering
+            # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
+            # Power line at 50 Hz, as proved with plots below
+            # Band pass FIR filter from 0.5 - 45 Hz => still need to apply notch filter at 50Hz,
+            # since the filter is not acting upon the 50Hz component (neglectable attenuation)
+            raw_ecg = raw_ecg.notch_filter(50, verbose=verbose)
+            raw_ecg = raw_ecg.filter(l_freq=0.5, h_freq=45, verbose=verbose)
+            # OBS the order between notch and bandpass filter is inrelevant (TRIED)
+            # GSR -------------------------------------------------------------------------------------------
+            # Artifact removal and filtering
+            # documentation: https://mne.tools/0.24/auto_tutorials/preprocessing/30_filtering_resampling.html
+            # Power line at 50 Hz, as proved with plots below
+            # Low pass FIR filter at 60 Hz => still need to apply notch filter at 50Hz
+            raw_gsr = raw_gsr.notch_filter(50, verbose=verbose)
+            raw_gsr = raw_gsr.filter(l_freq=None, h_freq=60, verbose=verbose)
+            # OBS the order between notch and bandpass filter is inrelevant (TRIED)
 
         # Extract data (removing baseline pre/post-stimulus)
         eeg_data, time = raw_eeg[SELECTED_EEG_CH, video_indices[0]:video_indices[1]]
         ecg_data, time = raw_ecg[:, video_indices[0]:video_indices[1]]
         gsr_data, time = raw_gsr[:, video_indices[0]:video_indices[1]]
 
-        # Baseline correction for GSR (to homologate with others, who instead had high-pass filters)
-        baseline, _ = raw_gsr[:, video_indices[0]-26:video_indices[0]]  # 26 samples with 128 Hz <=> 200ms
-        if np.array(baseline).all()==0:  # empty baseline 
-            raise NameError('GSR data: Baseline not found (missing data)!')
-        gsr_data = gsr_data - np.mean(baseline)
+        if preprocess:
+            # Baseline correction for GSR (to homologate with others, who instead had high-pass filters)
+            offset = 0.2  # seconds
+            offset_in_samples = int(math.ceil(offset / (1 / sampling_freq)))
+            baseline, _ = raw_gsr[:, video_indices[0]-offset_in_samples:video_indices[0]]
+            if np.array(baseline).all()==0:  # empty baseline
+                raise NameError('GSR data: Baseline not found (missing data)!')
+            gsr_data = gsr_data - np.mean(baseline)
 
         # GAZE DATA ----------------------------------------------------------------
         gaze_file = os.path.join(dir, "P{}-Rec1-All-Data-New_Section_{}.tsv".format(subject, session))
@@ -245,10 +256,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sessions_path', type=str, default='hci-tagging-database/Sessions', help='Path to Sessions folder')
     parser.add_argument('--save_path', type=str, default='hci-tagging-database/preproc_data', help='Path to save preprocessed data')
+    parser.add_argument('--sampling_freq', type=int, default=256, help='Sampling frequency of resulting data in Hz (256 is default for MAHNOB-HCI)')
+    parser.add_argument('--preprocess', type=bool, action=argparse.BooleanOptionalAction, default=False, help="Apply pre-processing techniques to the data")
     parser.add_argument('--verbose',  type=bool, action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
 
     sessions_dir = list_files(args.sessions_path, sorted_dir=True)
-    preprocess(sessions_dir, args.save_path, args.verbose)
+    preprocess(sessions_dir, args.save_path, args.sampling_freq, args.preprocess, args.verbose)
 
     
