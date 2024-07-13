@@ -131,7 +131,7 @@ class DatasetCreator:
                         if self.verbose:
                             print("\033[93mGaze segment too noisy for subject: {}, sample: {}, segment:{}!\033[0m"
                                     .format(subj, id, str(j//(n_points_sample_gaze - overlap_step_gaze))))
-                        continue
+                        # continue
 
                     # Create single variable containing all gaze information
                     eye = np.column_stack((pupil, gaze_coord, eye_dist))
@@ -251,16 +251,18 @@ if __name__ == '__main__':
     m = 30 # Number of augmented signals for each original sample
     SNR = 5
 
+    X_train = data
+    y_train = labels
     train_data = load_dataset(X_train, y_train, scaling=args.augment_data, noise=args.augment_data, m=m, SNR=SNR)
-    test_data = load_dataset(X_test, y_test, scaling=False, noise=False, m=1, SNR=None)
+    # test_data = load_dataset(X_test, y_test, scaling=False, noise=False, m=1, SNR=None)
 
     print("Len train before augmentation: ", len(X_train))
     print("Len train after augmentation: ", len(train_data))
-    print("Len test: ", len(test_data))
-    print("Tot dataset: ", len(train_data) + len(test_data))
+    # print("Len test: ", len(test_data))
+    # print("Tot dataset: ", len(train_data) + len(test_data))
 
     if not os.path.exists(args.save_path):
         os.makedirs(args.save_path)
         
-    torch.save(train_data, f'{args.save_path}/train_augmented_data.pt')
-    torch.save(test_data,  f'{args.save_path}/test_data.pt')
+    torch.save(train_data, f'{args.save_path}/train{"_augmented" if args.augment_data else ""}_data.pt')
+    # torch.save(test_data,  f'{args.save_path}/test_data.pt')

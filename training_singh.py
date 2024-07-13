@@ -112,6 +112,7 @@ class Trainer():
 
             train_acc = 100*train_correct/train_total
             train_f1 = f1_score(train_y_true.detach(), train_y_pred.detach(), average='macro')
+            train_f1_arousal, train_f1_valence = f1_score(train_y_true.detach(), train_y_pred.detach(), average=None)
             
            
             self.net.eval()  # switch net to evaluate setting 
@@ -140,13 +141,21 @@ class Trainer():
 
             acc = 100*correct/total
             f1 = f1_score(y_true.detach(), y_pred.detach(), average='macro')
+            f1_arousal, f1_valence = f1_score(y_true.detach(), y_pred.detach(), average=None)
 
             # Log metrics
-            wandb.log({"train loss": running_loss_train/len(train_loader), "train acc": train_acc, "train f1": train_f1,
-                           "val loss": running_loss_eval/len(eval_loader), "val acc": acc, "val f1": f1})
+            wandb.log(
+                {"train loss": running_loss_train / len(train_loader), "train acc": train_acc, "train f1": train_f1,
+                 "val loss": running_loss_eval / len(eval_loader), "val acc": acc, "val f1": f1,
+                 "train arousal f1": train_f1_arousal, "train valence f1": train_f1_valence,
+                 "val arousal f1": f1_arousal, "val valence f1": f1_valence})
 
-            print('Epoch {:03d}: Loss {:.4f}, Accuracy {:.4f}, F1 score {:.4f} || Val Loss {:.4f}, Val Accuracy {:.4f}, Val F1 score {:.4f}  [Time: {:.4f}]'
-                  .format(epoch + 1, running_loss_train/len(train_loader), train_acc, train_f1, running_loss_eval/len(eval_loader), acc, f1, end-start))
+            print(
+                "Epoch {:03d}: Loss {:.4f}, Accuracy {:.4f}, F1 score {:.4f}, F1 Arousal {:.4f}, F1 Valence {:.4f} || "
+                "Val Loss {:.4f}, Val Accuracy {:.4f}, Val F1 score {:.4f}, Val F1 Arousal {:.4f}, Val F1 Valence {:.4f} [Time: {:.4f}]"
+                .format(epoch + 1, running_loss_train / len(train_loader), train_acc, train_f1,
+                        train_f1_arousal, train_f1_valence, running_loss_eval / len(eval_loader), acc, f1, f1_arousal,
+                        f1_valence, end - start))
             
             if f1 > best_f1:
                 best_f1 = f1

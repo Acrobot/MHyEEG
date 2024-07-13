@@ -23,6 +23,8 @@ def list_files(directory, sorted_dir):
 
 
 def preprocess(sessions_dir, save_path, sampling_freq, preprocess=True, verbose=False):
+    total_saved = 0
+
     for dir_id in tqdm(range(len(sessions_dir)), desc='Preprocessing'):
         dir = sessions_dir[dir_id]
 
@@ -236,13 +238,16 @@ def preprocess(sessions_dir, save_path, sampling_freq, preprocess=True, verbose=
         # SAVE CURRENT TRIAL IN NEW DATASET (IN CSV FORMAT) ------------------------
         path_name = os.path.join(save_path, 'S'+f"{int(subject):02}")
         if not os.path.exists(path_name):
-                os.makedirs(path_name)
+            os.makedirs(path_name)
                 
         trial_data = [eeg_data.T, ecg_data.T, gsr_data.T, mean_pupil_dim, np.stack((mean_gaze_x, mean_gaze_y), axis=1), mean_eye_dist]
         signals_types = ["EEG", "ECG", "GSR", "PUPIL", "GAZE_COORD", "EYE_DIST"]
         for i in range(len(signals_types)):
             file_name = os.path.join(path_name, '{}_{}.csv'.format(int(session)//2 - 1, signals_types[i]))
             np.savetxt(file_name, trial_data[i], delimiter=",")
+
+        print(f'!!!! Total saved {total_saved}')
+        total_saved += 1
 
         trial_labels = [feltArsl, feltVlnc]
         labels_types = ["feltArsl", "feltVlnc"]
